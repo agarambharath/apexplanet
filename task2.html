@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🌤️ Weather Forecast</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #89f7fe, #66a6ff 90%);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      background: rgba(255,255,255,0.9);
+      padding: 32px 24px 24px 24px;
+      border-radius: 24px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+      text-align: center;
+      width: 330px;
+      position: relative;
+      backdrop-filter: blur(8px);
+      min-width: 270px;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 2rem;
+      color: #0077b6;
+      letter-spacing: 1px;
+      margin-bottom: 14px;
+    }
+
+    .datetime {
+      color:#222;
+      font-size: 1rem;
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+      opacity: 0.8;
+    }
+
+    input[type="text"] {
+      padding: 12px;
+      width: 80%;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1.08rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border: 1.5px solid #0077b6;
+    }
+
+    button {
+      padding: 10px 22px;
+      background-color: #0077b6;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: background 0.2s;
+    }
+
+    button:hover, button:focus {
+      background-color: #005987;
+    }
+
+    .weather-card {
+      margin-top: 24px;
+      background-color: #f0f8ff;
+      padding: 22px 16px;
+      border-radius: 18px;
+      box-shadow: 0 4px 18px rgba(59,130,246,0.09);
+      opacity: 0;
+      transform: translateY(10px) scale(0.95);
+      transition: opacity 0.6s, transform 0.6s;
+      min-height: 100px;
+      min-width: 200px;
+    }
+    .weather-card.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    .weather-card img {
+      width: 78px;
+      margin: 12px 0;
+    }
+    .error {
+      color: #ca3142;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    /* Spinner */
+    .spinner {
+      border: 5px solid #e5e5e5;
+      border-top: 5px solid #0077b6;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      margin: 24px auto;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @media (max-width: 400px) {
+      .container { width: 97%; padding: 10px 3px; }
+      input[type="text"] { width: 97%; }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🌤️ Weather Info</h1>
+    <div class="datetime" id="now"></div>
+
+    <input type="text" id="cityInput" placeholder="Enter city name" autocomplete="on" />
+    <br>
+    <button onclick="getWeather()">Search</button>
+
+    <div class="weather-card" id="weather"></div>
+  </div>
+  <script>
+    // Display the current date and time
+    function updateDateTime() {
+      const options = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute:'2-digit' };
+      document.getElementById("now").textContent = new Date().toLocaleString(undefined, options);
+    }
+    updateDateTime();
+    setInterval(updateDateTime, 60000);
+
+    const apiKey = "8f6dd267dd2994eb5c564cb09c9a3264"; // Use your real API key
+
+    function showSpinner(targetDiv) {
+      targetDiv.innerHTML = '<div class="spinner"></div>';
+      targetDiv.classList.add("show");
+    }
+
+    function getWeather() {
+      const city = document.getElementById("cityInput").value.trim();
+      const weatherDiv = document.getElementById("weather");
+
+      // Reset state
+      weatherDiv.classList.remove("show");
+      weatherDiv.innerHTML = "";
+
+      if (!city) {
+        weatherDiv.innerHTML = "<p class='error'>⚠️ Please enter a city name.</p>";
+        weatherDiv.classList.add("show");
+        return;
+      }
+
+      // Show spinner while fetching
+      showSpinner(weatherDiv);
+
+      const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`;
+
+      fetch(url)
+        .then(response => {
+          if (!response.ok) {
+            return response.json().then(err => {
+              throw new Error(err.message || "City not found");
+            });
+          }
+          return response.json();
+        })
+        .then(data => {
+          const { name, sys, main, weather, wind } = data;
+          const icon = weather[0].icon;
+          const description = weather[0].description;
+          weatherDiv.innerHTML = `
+            <h3>📍 ${name}, ${sys.country}</h3>
+            <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="weather icon" />
+            <div style="font-size:1.35rem; margin:0.5em 0 0.2em 0;">${main.temp}°C</div>
+            <div style="font-size:1rem; color:#0077b6">${description.charAt(0).toUpperCase() + description.slice(1)}</div>
+            <p style="margin:.5em 0 0 0;">💧 Humidity: ${main.humidity}%</p>
+            <p style="margin:0;">💨 Wind: ${wind.speed} m/s</p>
+            <p style="margin:0;">🌥️ Min/Max: ${main.temp_min}°C / ${main.temp_max}°C</p>
+          `;
+          weatherDiv.classList.add("show");
+        })
+        .catch(error => {
+          weatherDiv.innerHTML = `<p class="error">❌ ${error.message}</p>`;
+          weatherDiv.classList.add("show");
+          console.error("Error:", error);
+        });
+    }
+
+    // Allow pressing "Enter" in the input to search
+    document.getElementById("cityInput").addEventListener("keydown", function(e){
+      if (e.key === "Enter") {
+        e.preventDefault();
+        getWeather();
+      }
+    });
+  </script>
+</body>
+</html>
